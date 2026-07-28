@@ -3,9 +3,10 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading;
+
+using srm.utils;
 
 namespace System.Text.RegularExpressions
 {
@@ -986,7 +987,8 @@ namespace System.Text.RegularExpressions
                     bitsToSet |= valueBit;
                 }
                 int slotRead = slot;
-                while (slotRead != Interlocked.CompareExchange(ref slot, slotRead | bitsToSet, slotRead)) {
+                while (slotRead != Interlocked.CompareExchange(ref slot, slotRead | bitsToSet, slotRead))
+                {
                     slotRead = slot;
                 }
 
@@ -1203,7 +1205,11 @@ namespace System.Text.RegularExpressions
             StringBuilder? categoriesBuilder = null;
             if (categoryLength > 0)
             {
+#if NETSTANDARD2_0
+                categoriesBuilder = new StringBuilder().Append(charClass, end, categoryLength);
+#else
                 categoriesBuilder = new StringBuilder().Append(charClass.AsSpan(end, categoryLength));
+#endif
             }
 
             return new RegexCharClass(IsNegated(charClass, start), ranges, categoriesBuilder, sub);

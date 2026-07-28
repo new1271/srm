@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 
+using srm.utils;
+
 namespace System.Text.RegularExpressions
 {
     /// <summary>Builds a tree of RegexNodes from a regular expression.</summary>

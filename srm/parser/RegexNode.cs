@@ -42,6 +42,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
+using srm.utils;
+
 namespace System.Text.RegularExpressions
 {
     internal sealed class RegexNode
@@ -194,6 +196,7 @@ namespace System.Text.RegularExpressions
         }
 
 #if DEBUG
+
         /// <summary>Validate invariants the rest of the implementation relies on for processing fully-built trees.</summary>
         [Conditional("DEBUG")]
         private void ValidateFinalTreeInvariants()
