@@ -4,11 +4,11 @@
 		<TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<DefineConstants>UNSAFE</DefineConstants>
-		<PackageId>Microsoft.Automata.SRM</PackageId>
-		<Authors>Microsoft</Authors>
+		<PackageId>RiceTea.unofficial.Microsoft.Automata.SRM</PackageId>
+		<Authors>Microsoft, RiceTea (new1271)</Authors>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
-		<PackageProjectUrl>https://github.com/AutomataDotNet/srm</PackageProjectUrl>
+		<PackageProjectUrl>https://github.com/new1271/srm</PackageProjectUrl>
 		<Description>High-performance .NET regex engine with predictable performance</Description>
 		<PackageTags>regular expression regex matching unicode</PackageTags>
 		<PackageIcon>icon.png</PackageIcon>
@@ -16,7 +16,9 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="$(BuildType)==Official">
+	<PropertyGroup>
+		<AssemblyVersion>2.1.0.0</AssemblyVersion>
+		<PackageVersion>2.1.0.0</PackageVersion>
 		<SignAssembly>true</SignAssembly>
 		<DelaySign>true</DelaySign>
 		<KeyFile>../scripts/35MSSharedLib1024.snk</KeyFile>
