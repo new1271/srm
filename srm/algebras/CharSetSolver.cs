@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -222,18 +222,18 @@ namespace Microsoft.SRM
                 return ".";
 
             #region try to optimize representation involving common direct use of \d \w and \s to avoid blowup of ranges
-            if (SRM.Regex.s_unicode != null)
+            if (SRM.Regex.Unicode != null)
             {
-                BDD digit = Regex.s_unicode.CategoryCondition(8);
-                if (pred == Regex.s_unicode.WordLetterCondition)
+                BDD digit = Regex.Unicode.CategoryCondition(8);
+                if (pred == Regex.Unicode.WordLetterCondition)
                     return @"\w";
-                if (pred == Regex.s_unicode.WhiteSpaceCondition)
+                if (pred == Regex.Unicode.WhiteSpaceCondition)
                     return @"\s";
                 if (pred == digit)
                     return @"\d";
-                if (pred == MkNot(Regex.s_unicode.WordLetterCondition))
+                if (pred == MkNot(Regex.Unicode.WordLetterCondition))
                     return @"\W";
-                if (pred == MkNot(Regex.s_unicode.WhiteSpaceCondition))
+                if (pred == MkNot(Regex.Unicode.WhiteSpaceCondition))
                     return @"\S";
                 if (pred == MkNot(digit))
                     return @"\D";
@@ -246,15 +246,15 @@ namespace Microsoft.SRM
                 return StringUtility.Escape((char)ranges[0].Item1);
 
             #region if too many ranges try to optimize the representation using \d \w etc.
-            if (SRM.Regex.s_unicode != null && ranges.Length > 10)
+            if (SRM.Regex.Unicode != null && ranges.Length > 10)
             {
-                BDD w = Regex.s_unicode.WordLetterCondition;
+                BDD w = Regex.Unicode.WordLetterCondition;
                 BDD W = MkNot(w);
-                BDD d = Regex.s_unicode.CategoryCondition(8);
+                BDD d = Regex.Unicode.CategoryCondition(8);
                 BDD D = MkNot(d);
                 BDD asciiDigit = MkCharSetFromRange('0', '9');
                 BDD nonasciiDigit = MkAnd(d, MkNot(asciiDigit));
-                BDD s = Regex.s_unicode.WhiteSpaceCondition;
+                BDD s = Regex.Unicode.WhiteSpaceCondition;
                 BDD S = MkNot(s);
                 BDD wD = MkAnd(w, D);
                 BDD SW = MkAnd(S, W);

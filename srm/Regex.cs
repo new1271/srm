@@ -7,27 +7,26 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Threading;
 
 namespace Microsoft.SRM
 {
     [Serializable]
     public class Regex
     {
-        private static CharSetSolver? solver;
+        private static readonly Lazy<Unicode.UnicodeCategoryTheory<BDD>> _unicodeLazy = new Lazy<Unicode.UnicodeCategoryTheory<BDD>>(
+            () => new Unicode.UnicodeCategoryTheory<BDD>(new CharSetSolver()), LazyThreadSafetyMode.ExecutionAndPublication);
 
         /// <summary>
         /// The unicode component includes the BDD algebra. It is being shared as a static member for efficiency.
         /// </summary>
-        internal static readonly Unicode.UnicodeCategoryTheory<BDD> s_unicode = new Unicode.UnicodeCategoryTheory<BDD>(new CharSetSolver());
+        internal static Unicode.UnicodeCategoryTheory<BDD> Unicode => _unicodeLazy.Value;
 
         internal const string _DFA_incompatible_with = "DFA option is incompatible with ";
 
         internal IMatcher _matcher;
 
-        public static void Initialize()
-        {
-            solver = new CharSetSolver();
-        }
+        public static void Initialize() => _ = Unicode;
 
         public Regex(string pattern) : this(pattern, RegexOptions.None) { }
 
@@ -57,8 +56,8 @@ namespace Microsoft.SRM
             //in which case use the InvariantCulture if the option specifies CultureInvariant
             //otherwise use the current culture
             var theculture = culture ?? ((options & RegexOptions.CultureInvariant) != 0 ? CultureInfo.InvariantCulture : CultureInfo.CurrentCulture);
-            RegexToAutomatonConverter<BDD> converter = new RegexToAutomatonConverter<BDD>(s_unicode, theculture);
-            CharSetSolver solver = (CharSetSolver)s_unicode.solver;
+            RegexToAutomatonConverter<BDD> converter = new RegexToAutomatonConverter<BDD>(Unicode, theculture);
+            CharSetSolver solver = (CharSetSolver)Unicode.solver;
             var root = converter.ConvertNodeToSymbolicRegex(tree.Root, true);
             if (!root.info.ContainsSomeCharacter)
                 throw new NotSupportedException(_DFA_incompatible_with + "characterless pattern");

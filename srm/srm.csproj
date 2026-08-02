@@ -17,8 +17,8 @@
 	</PropertyGroup>
 
 	<PropertyGroup>
-		<AssemblyVersion>2.2.1.0</AssemblyVersion>
-		<PackageVersion>2.2.1.0</PackageVersion>
+		<AssemblyVersion>2.2.2</AssemblyVersion>
+		<PackageVersion>2.2.2</PackageVersion>
 		<SignAssembly>true</SignAssembly>
 		<DelaySign>true</DelaySign>
 		<KeyFile>../scripts/35MSSharedLib1024.snk</KeyFile>
