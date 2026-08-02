@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.IO;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.SRM
 {
@@ -24,7 +25,7 @@ namespace Microsoft.SRM
         /// <param name="input">given iput string</param>
         /// <param name="startat">start position in the input</param>
         /// <param name="endat">end position in the input</param>
-        public Match? FindMatch(bool isMatch, string input, int startat, int endat);
+        public Match? FindMatch(bool isMatch, ReadOnlySpan<char> input, int startat, int endat);
 
         /// <summary>
         /// Custom serialization of the matcher as text in visible ASCII range.

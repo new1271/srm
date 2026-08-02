@@ -1,14 +1,11 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Numerics;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.IO;
 using System.Globalization;
+using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Microsoft.SRM
@@ -448,7 +445,7 @@ namespace Microsoft.SRM
         /// <param name="i">refers to i'th character in the input</param>
         /// <param name="q">source state</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private State<S> Delta(string input, int i, State<S> q)
+        private State<S> Delta(ReadOnlySpan<char> input, int i, State<S> q)
         {
             int c = input[i];
             // atom_id = atoms.Length represents \Z (last \n)
@@ -531,7 +528,7 @@ namespace Microsoft.SRM
         /// <param name="startat">the position to start search in the input string</param>
         /// <param name="k">the next position after the end position in the input</param>
         /// </summary>
-        public Match? FindMatch(bool quick, string input, int startat, int k)
+        public Match? FindMatch(bool quick, ReadOnlySpan<char> input, int startat, int k)
         {
             if (_checkTimeout)
             {
@@ -549,7 +546,7 @@ namespace Microsoft.SRM
                 uint nextKind = GetCharKind(input, startat);
                 bool emptyMatchExists = A.IsNullableFor(CharKind.Context(prevKind, nextKind));
                 if (emptyMatchExists)
-        {
+                {
                     if (quick)
                         return null;
                     else
@@ -597,7 +594,7 @@ namespace Microsoft.SRM
                     }
                     else
                         //walk in reverse to locate the start position of the match
-                    i_start = FindStartPosition(input, i, i_q0_A1);
+                        i_start = FindStartPosition(input, i, i_q0_A1);
                     i_end = FindEndPosition(input, k, i_start);
                 }
 
@@ -633,7 +630,7 @@ namespace Microsoft.SRM
         /// <param name="i">inclusive start position</param>
         /// <param name="k">exclusive end position</param>
         /// <returns></returns>
-        private int FindEndPosition(string input, int k, int i)
+        private int FindEndPosition(ReadOnlySpan<char> input, int k, int i)
         {
             int i_end = k;
             uint prevCharKind = GetCharKind(input, i - 1);
@@ -651,7 +648,7 @@ namespace Microsoft.SRM
             {
                 q = Delta(input, i, q);
 
-                if (q.IsNullable(GetCharKind(input, i+1)))
+                if (q.IsNullable(GetCharKind(input, i + 1)))
                 {
                     // stop here if q is lazy
                     if (q.Node.info.IsLazy)
@@ -683,7 +680,7 @@ namespace Microsoft.SRM
         /// <param name="i">position to start walking back from, i points at the last character of the match</param>
         /// <param name="match_start_boundary">do not pass this boundary when walking back</param>
         /// <returns></returns>
-        private int FindStartPosition(string input, int i, int match_start_boundary)
+        private int FindStartPosition(ReadOnlySpan<char> input, int i, int match_start_boundary)
         {
             // fetch the correct start state for Ar
             // this depends on previous character ---
@@ -725,7 +722,7 @@ namespace Microsoft.SRM
                 if (q.IsNothing)
                     break;
 
-                if (q.IsNullable(GetCharKind(input, i-1)))
+                if (q.IsNullable(GetCharKind(input, i - 1)))
                 {
                     //earliest start point so far
                     //this must happen at some point
@@ -750,7 +747,7 @@ namespace Microsoft.SRM
         /// <param name="i">start position</param>
         /// <param name="i_q0">last position the initial state of A1 was visited</param>
         /// <param name="watchdog">length of match when positive</param>
-        private int FindFinalStatePosition(string input, int k, int i, out int i_q0, out int watchdog)
+        private int FindFinalStatePosition(ReadOnlySpan<char> input, int k, int i, out int i_q0, out int watchdog)
         {
             // get the correct start state of A1,
             // which in general depends on the previous character kind in the input
@@ -886,7 +883,7 @@ namespace Microsoft.SRM
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private uint GetCharKind(string input, int i)
+        private uint GetCharKind(ReadOnlySpan<char> input, int i)
         {
             if (A.info.ContainsSomeAnchor)
             {
@@ -934,10 +931,10 @@ namespace Microsoft.SRM
         /// <param name="i">the start index in input to search from</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int IndexOfStartset(string input, int i)
+        private int IndexOfStartset(ReadOnlySpan<char> input, int i)
         {
             if (A_StartSet_Size <= s_A_startset_array_max_size)
-                return input.IndexOfAny(A_startset_array, i);
+                return input.Slice(i).IndexOfAny(A_startset_array);
             else
             {
                 for (int j = i; j < input.Length; j++)

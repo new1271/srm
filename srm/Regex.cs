@@ -1,7 +1,9 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
@@ -11,11 +13,7 @@ namespace Microsoft.SRM
     [Serializable]
     public class Regex
     {
-        private static readonly CharSetSolver solver;
-        static Regex()
-        {
-            solver = new CharSetSolver();
-        }
+        private static CharSetSolver? solver;
 
         /// <summary>
         /// The unicode component includes the BDD algebra. It is being shared as a static member for efficiency.
@@ -26,13 +24,18 @@ namespace Microsoft.SRM
 
         internal IMatcher _matcher;
 
+        public static void Initialize()
+        {
+            solver = new CharSetSolver();
+        }
+
         public Regex(string pattern) : this(pattern, RegexOptions.None) { }
 
-        public Regex(string pattern, RegexOptions options) : this(pattern, options, System.Threading.Timeout.InfiniteTimeSpan) {}
+        public Regex(string pattern, RegexOptions options) : this(pattern, options, System.Threading.Timeout.InfiniteTimeSpan) { }
 
-        public Regex(string pattern, RegexOptions options, TimeSpan matchTimeout) : this(pattern, options, matchTimeout, null) {}
+        public Regex(string pattern, RegexOptions options, TimeSpan matchTimeout) : this(pattern, options, matchTimeout, null) { }
 
-        public Regex(string pattern, RegexOptions options, TimeSpan matchTimeout, CultureInfo culture)
+        public Regex(string pattern, RegexOptions options, TimeSpan matchTimeout, CultureInfo? culture)
         {
             // Parse the input
             System.Text.RegularExpressions.RegexTree tree = System.Text.RegularExpressions.RegexParser.Parse(pattern, options,
@@ -45,7 +48,7 @@ namespace Microsoft.SRM
             //     throw new NotSupportedException(SRM.Regex._DFA_incompatible_with + RegexOptions.RightToLeft);
             // TBD: this could also be supported easily, but is not of priority right now
             if ((options & RegexOptions.ECMAScript) != 0)
-                throw new NotSupportedException(SRM.Regex._DFA_incompatible_with + RegexOptions.ECMAScript);
+                throw new NotSupportedException(_DFA_incompatible_with + RegexOptions.ECMAScript);
             // TBD: this will eventually be supported
             // if ((options & RegexOptions.Compiled) != 0)
             //     throw new NotSupportedException(SRM.Regex._DFA_incompatible_with + RegexOptions.Compiled);
@@ -99,42 +102,68 @@ namespace Microsoft.SRM
         private Regex(IMatcher matcher) => _matcher = matcher;
 
         /// <summary>
-        /// Returns true iff the input string matches. 
-        /// <param name="input">given iput string</param>
-        /// <param name="startat">start position in the input</param>
-        /// <param name="endat">end position in the input, -1 means that the value is unspecified and taken to be input.Length-1</param>
+        /// Returns true if the input string matches. 
+        /// <param name="input">given input string</param>
         /// </summary>
-        public bool IsMatch(string input, int startat = 0, int endat = -1) {
-            int k = endat + 1;
-            if (k == 0) {
-                k = input.Length;
-            }
-            return _matcher.FindMatch(true, input, startat, k) is null;
-        }
+        public bool IsMatch(ReadOnlySpan<char> input) => _matcher.FindMatch(isMatch: true, input, 0, input.Length) is null;
 
         /// <summary>
         /// Returns all matches as pairs (startindex, length) in the input string.
         /// </summary>
-        /// <param name="input">given iput string</param>
+        /// <param name="input">given input string</param>
+        public Match? Match(ReadOnlySpan<char> input) => _matcher.FindMatch(isMatch: false, input, 0, input.Length)!.Value;
+
+        /// <summary>
+        /// Returns all matches as pairs (startindex, length) in the input string.
+        /// </summary>
+        /// <param name="input">given input string</param>
         /// <param name="limit">as soon as this many matches have been found the search terminates, 0 or negative value means that there is no bound, default is 0</param>
-        /// <param name="startat">start position in the input, default is 0</param>
-        /// <param name="endat">end position in the input, -1 means that the value is unspecified and taken to be input.Length-1</param>
-        public List<Match> Matches(string input, int limit = 0, int startat = 0, int endat = -1) {
-            int k = endat + 1;
-            if (k == 0) {
-                k = input.Length;
+        public Match[] Matches(ReadOnlySpan<char> input, int limit = 0)
+        {
+            ArrayPool<Match> pool = ArrayPool<Match>.Shared;
+            Match[] buffer;
+            if (limit <= 0)
+            {
+                buffer = pool.Rent(1);
+                limit = int.MaxValue;
             }
-            List<Match> results = new List<Match>();
-            Match result = _matcher.FindMatch(false, input, startat, k).Value;
-            while (result.Success) {
-                results.Add(result);
-                int newStart = result.Index + Math.Max(1, result.Length);
-                if (newStart >= input.Length)
-                    break;
-                result = _matcher.FindMatch(false, input, newStart, k).Value;
+            else
+                buffer = pool.Rent(limit);
+            int i = 0, length = input.Length;
+
+            try
+            {
+                IMatcher matcher = _matcher;
+                Match result = matcher.FindMatch(false, input, 0, length)!.Value;
+                while (result.Success && i < limit)
+                {
+                    if (i >= buffer.Length)
+                    {
+                        Match[] newBuffer = pool.Rent(buffer.Length * 2);
+                        Array.Copy(buffer, newBuffer, buffer.Length);
+                        pool.Return(buffer);
+                        buffer = newBuffer;
+                    }
+                    buffer[i++] = result;
+                    int newStart = result.Index + Math.Max(1, result.Length);
+                    if (newStart >= input.Length)
+                        break;
+                    result = matcher.FindMatch(false, input, newStart, length)!.Value;
+                }
+
+                if (i <= 0)
+                    return Array.Empty<Match>();
+
+                Match[] results = new Match[i];
+                Array.Copy(buffer, results, i);
+                return results;
             }
-            return results;
+            finally
+            {
+                pool.Return(buffer, clearArray: false);
+            }
         }
+
 
         /// <summary>
         /// Serialize the matcher by appending it into sb.
@@ -154,19 +183,19 @@ namespace Microsoft.SRM
             input.Split(s_top_level_separator);
             string[] fragments = input.Split(s_top_level_separator);
             if (fragments.Length != 15)
-                throw new ArgumentException($"{nameof(Regex.Deserialize)} error", nameof(input));
+                throw new ArgumentException($"{nameof(Deserialize)} error", nameof(input));
 
             try
             {
                 BVAlgebraBase alg = BVAlgebraBase.Deserialize(fragments[1]);
                 IMatcher matcher = alg is BV64Algebra ?
-                    (IMatcher)new SymbolicRegexMatcher<ulong>(alg as BV64Algebra, fragments) :
-                    (IMatcher)new SymbolicRegexMatcher<BV>(alg as BVAlgebra, fragments);
+                    new SymbolicRegexMatcher<ulong>(alg as BV64Algebra, fragments) :
+                    new SymbolicRegexMatcher<BV>(alg as BVAlgebra, fragments);
                 return new Regex(matcher);
             }
             catch (Exception e)
             {
-                throw new ArgumentException($"{nameof(Regex.Deserialize)} error", nameof(input), e);
+                throw new ArgumentException($"{nameof(Deserialize)} error", nameof(input), e);
             }
         }
 
@@ -181,7 +210,7 @@ namespace Microsoft.SRM
         {
             _matcher.SaveDGML(writer, bound, hideStateInfo, addDotStar, inReverse, onlyDFAinfo, maxLabelLength);
         }
-        
+
         /// <summary>
         /// Serialize this symbolic regex matcher to the given file.
         /// If formatter is null then an instance of 

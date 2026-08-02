@@ -262,7 +262,7 @@ namespace System.Text.RegularExpressions
         /// The direction and case-sensitivity of the match is determined
         /// by the arguments to the RegexBoyerMoore constructor.
         /// </summary>
-        public int Scan(string text, int index, int beglimit, int endlimit)
+        public int Scan(ReadOnlySpan<char> text, int index, int beglimit, int endlimit)
         {
             int defadv;
             int test;
